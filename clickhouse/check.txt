@@ -1,0 +1,71 @@
+docker-compose exec clickhouse clickhouse-client --user admin --password password
+
+Проверка 1: Подключение к ClickHouse и база данных
+SHOW DATABASES;
+
+Проверка 2: Таблицы в базе ecommerce
+SHOW TABLES FROM ecommerce;
+
+Проверка 3: Данные в raw_events
+SELECT 
+    _topic,
+    count() as total_count
+FROM ecommerce.raw_events 
+GROUP BY _topic;
+
+Проверка 4: Проверим обогащенные данные
+SELECT 
+    event_type,
+    service_source,
+    count() as count
+FROM ecommerce.enriched_events 
+GROUP BY event_type, service_source;
+
+Проверка 5: Проверим воронку конверсии
+WITH session_funnel AS (
+    SELECT 
+        session_id,
+        maxIf(1, service_source = 'view_service') as viewed,
+        maxIf(1, service_source = 'cart_service') as cart,
+        maxIf(1, service_source = 'order_service') as ordered
+    FROM ecommerce.enriched_events
+    GROUP BY session_id
+)
+SELECT
+    count() as total_sessions,
+    sum(viewed) as sessions_with_views,
+    sum(cart) as sessions_with_cart,
+    sum(ordered) as sessions_with_orders,
+    if(sessions_with_views > 0, sum(cart) / sum(viewed), 0) as view_to_cart_rate,
+    if(sessions_with_cart > 0, sum(ordered) / sum(cart), 0) as cart_to_order_rate,
+    if(sessions_with_views > 0, sum(ordered) / sum(viewed), 0) as conversion_rate
+FROM session_funnel;
+
+Проверка 6: Проверим продуктовые метрики
+SELECT 
+    metric_name,
+    count() as data_points,
+    avg(metric_value) as avg_value
+FROM ecommerce.product_metrics 
+GROUP BY metric_name;
+
+-- Conversion Rate
+SELECT 
+    'conversion_rate' as metric_name,
+    countDistinctIf(session_id, service_source = 'order_service') * 1.0 / 
+    countDistinctIf(session_id, service_source = 'view_service') as metric_value
+FROM ecommerce.enriched_events;
+
+-- Cart Abandonment Rate  
+SELECT
+    'cart_abandonment_rate' as metric_name,
+    countDistinctIf(session_id, service_source = 'cart_service' AND service_source != 'order_service') * 1.0 /
+    countDistinctIf(session_id, service_source = 'cart_service') as metric_value
+FROM ecommerce.enriched_events;
+
+-- GMV
+SELECT
+    'gmv' as metric_name,
+    sum(amount) as metric_value
+FROM ecommerce.enriched_events
+WHERE service_source = 'order_service';

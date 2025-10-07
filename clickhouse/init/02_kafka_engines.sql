@@ -15,15 +15,12 @@ CREATE TABLE
         'JSONEachRow'
     );
 
--- Cart Events topic
+-- Cart Events topic - adapted to the existing format
 CREATE TABLE
     ecommerce.kafka_cart_events (
-        event_type String,
+        type String,
         user_id UInt32,
-        session_id String,
-        timestamp Int64,
         product_id UInt32,
-        action String,
         quantity UInt32
     ) ENGINE = Kafka (
         'kafka:9092',
@@ -49,7 +46,7 @@ CREATE TABLE
         'JSONEachRow'
     );
 
--- Materialized views for joining into a single table
+-- Materialized views for combining into single table
 CREATE MATERIALIZED VIEW ecommerce.page_views_consumer TO ecommerce.raw_events AS
 SELECT
     event_type,
@@ -61,6 +58,7 @@ SELECT
     '' as action,
     0 as quantity,
     '' as order_id,
+    '' as cart_id,
     0 as amount,
     '' as status,
     'page-views' as _topic,
@@ -70,15 +68,16 @@ FROM
 
 CREATE MATERIALIZED VIEW ecommerce.cart_events_consumer TO ecommerce.raw_events AS
 SELECT
-    event_type,
+    type as event_type,
     user_id,
-    session_id,
-    toDateTime (timestamp) as timestamp,
+    concat ('session-', toString (user_id)) as session_id,
+    now () as timestamp,
     '' as page,
     product_id,
-    action,
+    type as action,
     quantity,
     '' as order_id,
+    '' as cart_id,
     0 as amount,
     '' as status,
     'cart-events' as _topic,
@@ -97,7 +96,8 @@ SELECT
     '' as action,
     0 as quantity,
     order_id,
-    amount,
+    '' as cart_id,
+    toDecimal64 (amount, 2) as amount,
     status,
     'order-events' as _topic,
     _offset

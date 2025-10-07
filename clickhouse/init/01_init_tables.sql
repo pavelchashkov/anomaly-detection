@@ -13,6 +13,7 @@ CREATE TABLE
         action String,
         quantity UInt32,
         order_id String,
+        cart_id String,
         amount Decimal(10, 2),
         status String,
         -- Technical fields
@@ -24,15 +25,14 @@ PARTITION BY
 ORDER BY
     (timestamp, session_id, user_id, event_type);
 
--- Enriched data view with labels for VictoriaMetrics
-CREATE VIEW
-    ecommerce.enriched_events AS
+-- In the enriched_events view, update the condition for cart_service
+CREATE
+OR REPLACE VIEW ecommerce.enriched_events AS
 SELECT
     event_type,
     user_id,
     session_id,
     timestamp,
-    -- Correcting the source definition
     multiIf (
         event_type IN ('page_view', 'product_click'),
         'view_service',
@@ -46,7 +46,6 @@ SELECT
         'order_service',
         'unknown'
     ) as service_source,
-    -- Cleared fields
     lower(trim(page)) as page,
     if (
         product_id > 0
