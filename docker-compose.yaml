@@ -54,6 +54,7 @@ services:
       KAFKA_BROKERS: "kafka:9092"
       TOPIC: "page-views"
     depends_on:
+      - kafka
       - kafka-init
     restart: unless-stopped
     networks:
@@ -67,6 +68,7 @@ services:
       KAFKA_BROKERS: "kafka:9092"
       TOPIC: "cart-events"
     depends_on:
+      - kafka
       - kafka-init
     restart: unless-stopped
     networks:
@@ -80,6 +82,7 @@ services:
       KAFKA_BROKERS: "kafka:9092"
       TOPIC: "order-events"
     depends_on:
+      - kafka
       - kafka-init
     restart: unless-stopped
     networks:
@@ -94,6 +97,7 @@ services:
     ports:
       - "9002:9000"
     depends_on:
+      - kafka
       - kafka-init
     networks:
       - kafka-net
@@ -112,6 +116,7 @@ services:
       - clickhouse_data:/var/lib/clickhouse
       - ./clickhouse/init:/docker-entrypoint-initdb.d
     depends_on:
+      - kafka
       - kafka-init
     networks:
       - kafka-net
