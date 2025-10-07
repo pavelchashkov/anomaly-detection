@@ -102,43 +102,43 @@ services:
     networks:
       - kafka-net
 
-  clickhouse:
-    image: clickhouse/clickhouse-server:23.8
-    ports:
-      - "8123:8123" # HTTP interface
-      - "9000:9000" # Native protocol
-    environment:
-      CLICKHOUSE_DB: "ecommerce"
-      CLICKHOUSE_USER: "admin"
-      CLICKHOUSE_PASSWORD: "password"
-      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-      - ./clickhouse/init:/docker-entrypoint-initdb.d
-    depends_on:
-      - kafka
-      - kafka-init
-    networks:
-      - kafka-net
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
-      interval: 5s
-      timeout: 10s
-      retries: 3
+  # clickhouse:
+  #   image: clickhouse/clickhouse-server:23.8
+  #   ports:
+  #     - "8123:8123" # HTTP interface
+  #     - "9000:9000" # Native protocol
+  #   environment:
+  #     CLICKHOUSE_DB: "ecommerce"
+  #     CLICKHOUSE_USER: "admin"
+  #     CLICKHOUSE_PASSWORD: "password"
+  #     CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+  #   volumes:
+  #     - clickhouse_data:/var/lib/clickhouse
+  #     - ./clickhouse/init:/docker-entrypoint-initdb.d
+  #   depends_on:
+  #     - kafka
+  #     - kafka-init
+  #   networks:
+  #     - kafka-net
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+  #     interval: 5s
+  #     timeout: 10s
+  #     retries: 3
 
-  victoriametrics:
-    image: victoriametrics/victoria-metrics:latest
-    ports:
-      - "8428:8428"
-    command:
-      - -storageDataPath=/victoria-metrics-data
-      - -httpListenAddr=:8428
-      - -promscrape.config=/etc/victoriametrics/scrape.yml
-    volumes:
-      - victoriametrics_data:/victoria-metrics-data
-      - ./victoriametrics/scrape.yml:/etc/victoriametrics/scrape.yml:ro
-    networks:
-      - kafka-net
+  # victoriametrics:
+  #   image: victoriametrics/victoria-metrics:latest
+  #   ports:
+  #     - "8428:8428"
+  #   command:
+  #     - -storageDataPath=/victoria-metrics-data
+  #     - -httpListenAddr=:8428
+  #     - -promscrape.config=/etc/victoriametrics/scrape.yml
+  #   volumes:
+  #     - victoriametrics_data:/victoria-metrics-data
+  #     - ./victoriametrics/scrape.yml:/etc/victoriametrics/scrape.yml:ro
+  #   networks:
+  #     - kafka-net
 
 volumes:
   clickhouse_data:

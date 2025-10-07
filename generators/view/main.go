@@ -19,7 +19,7 @@ type PageViewEvent struct {
 	UserID    int    `json:"user_id"`
 	ProductID int    `json:"product_id,omitempty"`
 	SessionID string `json:"session_id"`
-	Timestamp int64  `json:"timestamp"` // Меняем на int64 (Unix timestamp)
+	Timestamp int64  `json:"timestamp"`
 	Page      string `json:"page"`
 }
 
@@ -49,7 +49,7 @@ func main() {
 			log.Printf("Sent event: %s", eventJSON)
 		}
 
-		time.Sleep(time.Duration(1+rand.Intn(4)) * time.Second)
+		time.Sleep(time.Duration(5+rand.Intn(15)) * time.Second)
 	}
 }
 
@@ -62,7 +62,7 @@ func generateViewEvent() PageViewEvent {
 		UserID:    rand.Intn(1000) + 1,
 		ProductID: rand.Intn(100) + 1,
 		SessionID: fmt.Sprintf("session-%d", rand.Intn(10000)),
-		Timestamp: time.Now().Unix(), // Unix timestamp вместо time.Time
+		Timestamp: time.Now().Unix(),
 		Page:      pages[rand.Intn(len(pages))],
 	}
 }

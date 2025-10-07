@@ -17,8 +17,9 @@ type CartEvent struct {
 	EventType string `json:"event_type"`
 	UserID    int    `json:"user_id"`
 	ProductID int    `json:"product_id"`
+	CartID    string `json:"cart_id"`
 	SessionID string `json:"session_id"`
-	Timestamp int64  `json:"timestamp"` // Меняем на int64
+	Timestamp int64  `json:"timestamp"`
 	Action    string `json:"action"`
 	Quantity  int    `json:"quantity"`
 }
@@ -48,7 +49,7 @@ func main() {
 			log.Printf("Sent event: %s", eventJSON)
 		}
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(time.Duration(5+rand.Intn(15)) * time.Second)
 	}
 }
 
@@ -59,9 +60,10 @@ func generateCartEvent() CartEvent {
 		EventType: eventTypes[rand.Intn(len(eventTypes))],
 		UserID:    rand.Intn(1000) + 1,
 		ProductID: rand.Intn(100) + 1,
-		SessionID: fmt.Sprintf("session-%d", rand.Intn(10000)), // Добавляем session_id
-		Timestamp: time.Now().Unix(),                           // Меняем на Unix timestamp
+		CartID:    fmt.Sprintf("cart-%d", rand.Intn(10000)),
+		SessionID: fmt.Sprintf("session-%d", rand.Intn(10000)),
+		Timestamp: time.Now().Unix(),
 		Quantity:  rand.Intn(5) + 1,
-		Action:    eventTypes[rand.Intn(len(eventTypes))], // Добавляем action
+		Action:    eventTypes[rand.Intn(len(eventTypes))],
 	}
 }

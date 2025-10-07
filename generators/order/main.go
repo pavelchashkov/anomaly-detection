@@ -19,7 +19,7 @@ type OrderEvent struct {
 	UserID    int     `json:"user_id"`
 	OrderID   string  `json:"order_id"`
 	SessionID string  `json:"session_id"`
-	Timestamp int64   `json:"timestamp"` // Меняем на int64
+	Timestamp int64   `json:"timestamp"`
 	Amount    float64 `json:"amount"`
 	Status    string  `json:"status"`
 }
@@ -60,7 +60,7 @@ func generateOrderEvent() OrderEvent {
 		UserID:    rand.Intn(1000) + 1,
 		OrderID:   fmt.Sprintf("order-%d-%d", time.Now().Unix(), rand.Intn(1000)),
 		SessionID: fmt.Sprintf("session-%d", rand.Intn(10000)),
-		Timestamp: time.Now().Unix(), // Unix timestamp
+		Timestamp: time.Now().Unix(),
 		Amount:    float64(rand.Intn(10000)+100) / 100.0,
 		Status:    statuses[rand.Intn(len(statuses))],
 	}
