@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 
+	"shared-lib/common"
 	sharedKafka "shared-lib/kafka"
 
 	"github.com/segmentio/kafka-go"
@@ -23,8 +24,8 @@ type ViewEvent struct {
 }
 
 func main() {
-
-	writer := sharedKafka.NewWriter([]string{"kafka:9092"}, "user-events")
+	topic := common.GetEnv("TOPIC", "page-views")
+	writer := sharedKafka.NewWriter([]string{"kafka:9092"}, topic)
 	defer writer.Close()
 
 	defer writer.Close()

@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"time"
 
+	"shared-lib/common"
 	sharedKafka "shared-lib/kafka"
 
 	"github.com/segmentio/kafka-go"
@@ -21,7 +22,8 @@ type CartEvent struct {
 }
 
 func main() {
-	writer := sharedKafka.NewWriter([]string{"kafka:9092"}, "user-events")
+	topic := common.GetEnv("TOPIC", "cart-events")
+	writer := sharedKafka.NewWriter([]string{"kafka:9092"}, topic)
 	defer writer.Close()
 
 	log.Println("Cart generator started ...")
