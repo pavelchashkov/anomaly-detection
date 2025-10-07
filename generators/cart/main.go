@@ -7,21 +7,26 @@ import (
 	"math/rand"
 	"time"
 
+	"shared-lib/common"
 	sharedKafka "shared-lib/kafka"
 
 	"github.com/segmentio/kafka-go"
 )
 
 type CartEvent struct {
-	EventType string    `json:"event_type"`
-	UserID    int       `json:"user_id"`
-	ProductID int       `json:"product_id"`
-	Quantity  int       `json:"quantity"`
-	Timestamp time.Time `json:"timestamp"`
+	EventType string `json:"event_type"`
+	UserID    int    `json:"user_id"`
+	ProductID int    `json:"product_id"`
+	CartID    string `json:"cart_id"`
+	SessionID string `json:"session_id"`
+	Timestamp int64  `json:"timestamp"`
+	Action    string `json:"action"`
+	Quantity  int    `json:"quantity"`
 }
 
 func main() {
-	writer := sharedKafka.NewWriter([]string{"kafka:9092"}, "user-events")
+	topic := common.GetEnv("TOPIC", "cart-events")
+	writer := sharedKafka.NewWriter([]string{"kafka:9092"}, topic)
 	defer writer.Close()
 
 	log.Println("Cart generator started ...")
@@ -41,10 +46,10 @@ func main() {
 		if err != nil {
 			log.Printf("Failed to write message: %v", err)
 		} else {
-			log.Printf("Sent cart event: %s", eventJSON)
+			log.Printf("Sent event: %s", eventJSON)
 		}
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(time.Duration(5+rand.Intn(15)) * time.Second)
 	}
 }
 
@@ -55,7 +60,10 @@ func generateCartEvent() CartEvent {
 		EventType: eventTypes[rand.Intn(len(eventTypes))],
 		UserID:    rand.Intn(1000) + 1,
 		ProductID: rand.Intn(100) + 1,
+		CartID:    fmt.Sprintf("cart-%d", rand.Intn(10000)),
+		SessionID: fmt.Sprintf("session-%d", rand.Intn(10000)),
+		Timestamp: time.Now().Unix(),
 		Quantity:  rand.Intn(5) + 1,
-		Timestamp: time.Now(),
+		Action:    eventTypes[rand.Intn(len(eventTypes))],
 	}
 }

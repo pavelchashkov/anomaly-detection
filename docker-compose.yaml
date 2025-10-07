@@ -1,5 +1,5 @@
 services:
-  # Zookeeper (требуется для Kafka)
+  # Zookeeper (required for Kafka)
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
     environment:
@@ -28,18 +28,20 @@ services:
     networks:
       - kafka-net
 
-  # Сервис для создания топиков
+  # Topic creation service
   kafka-init:
     image: confluentinc/cp-kafka:7.5.0
     depends_on:
       - kafka
     command: >
       bash -c "
-        echo 'Waiting for Kafka to be ready...'
+        echo 'Waiting for Kafka to be ready ...'
         cub kafka-ready -b kafka:9092 1 30
-        echo 'Creating topic user-events...'
-        kafka-topics --create --if-not-exists --topic user-events --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1
-        echo 'Topic created successfully'
+        echo 'Creating topics ...'
+        kafka-topics --create --if-not-exists --topic page-views --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1
+        kafka-topics --create --if-not-exists --topic cart-events --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1  
+        kafka-topics --create --if-not-exists --topic order-events --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1
+        echo 'All topics created'
       "
     networks:
       - kafka-net
@@ -50,8 +52,9 @@ services:
       dockerfile: ./generators/view/Dockerfile
     environment:
       KAFKA_BROKERS: "kafka:9092"
-      TOPIC: "user-events"
+      TOPIC: "page-views"
     depends_on:
+      - kafka
       - kafka-init
     restart: unless-stopped
     networks:
@@ -63,8 +66,9 @@ services:
       dockerfile: ./generators/cart/Dockerfile
     environment:
       KAFKA_BROKERS: "kafka:9092"
-      TOPIC: "user-events"
+      TOPIC: "cart-events"
     depends_on:
+      - kafka
       - kafka-init
     restart: unless-stopped
     networks:
@@ -76,25 +80,69 @@ services:
       dockerfile: ./generators/order/Dockerfile
     environment:
       KAFKA_BROKERS: "kafka:9092"
-      TOPIC: "user-events"
+      TOPIC: "order-events"
     depends_on:
+      - kafka
       - kafka-init
     restart: unless-stopped
     networks:
       - kafka-net
 
-  # Kafdrop - Web UI для просмотра топиков Kafka
+  # Kafdrop - Web UI for viewing Kafka topics
   kafdrop:
     image: obsidiandynamics/kafdrop:3.30.0
     environment:
       KAFKA_BROKERCONNECT: "kafka:9092"
       JVM_OPTS: "-Xms32M -Xmx64M"
     ports:
-      - "9000:9000"
+      - "9002:9000"
     depends_on:
+      - kafka
       - kafka-init
     networks:
       - kafka-net
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    ports:
+      - "8123:8123" # HTTP interface
+      - "9000:9000" # Native protocol
+    environment:
+      CLICKHOUSE_DB: "ecommerce"
+      CLICKHOUSE_USER: "admin"
+      CLICKHOUSE_PASSWORD: "password"
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse/init:/docker-entrypoint-initdb.d
+    depends_on:
+      - kafka
+      - kafka-init
+    networks:
+      - kafka-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+
+  # victoriametrics:
+  #   image: victoriametrics/victoria-metrics:latest
+  #   ports:
+  #     - "8428:8428"
+  #   command:
+  #     - -storageDataPath=/victoria-metrics-data
+  #     - -httpListenAddr=:8428
+  #     - -promscrape.config=/etc/victoriametrics/scrape.yml
+  #   volumes:
+  #     - victoriametrics_data:/victoria-metrics-data
+  #     - ./victoriametrics/scrape.yml:/etc/victoriametrics/scrape.yml:ro
+  #   networks:
+  #     - kafka-net
+
+volumes:
+  clickhouse_data:
+  victoriametrics_data:
 
 networks:
   kafka-net:
