@@ -1,0 +1,101 @@
+services:
+  # Zookeeper (требуется для Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - kafka-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false" # Отключаем автосоздание
+    ports:
+      - "29092:29092"
+      - "9092:9092"
+    networks:
+      - kafka-net
+
+  # Сервис для создания топиков
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - kafka
+    command: >
+      bash -c "
+        echo 'Waiting for Kafka to be ready...'
+        cub kafka-ready -b kafka:9092 1 30
+        echo 'Creating topic user-events...'
+        kafka-topics --create --if-not-exists --topic user-events --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1
+        echo 'Topic created successfully'
+      "
+    networks:
+      - kafka-net
+
+  event-generator-view:
+    build:
+      context: .
+      dockerfile: ./generators/view/Dockerfile
+    environment:
+      KAFKA_BROKERS: "kafka:9092"
+      TOPIC: "user-events"
+    depends_on:
+      - kafka-init
+    restart: unless-stopped
+    networks:
+      - kafka-net
+
+  event-generator-cart:
+    build:
+      context: .
+      dockerfile: ./generators/cart/Dockerfile
+    environment:
+      KAFKA_BROKERS: "kafka:9092"
+      TOPIC: "user-events"
+    depends_on:
+      - kafka-init
+    restart: unless-stopped
+    networks:
+      - kafka-net
+
+  event-generator-order:
+    build:
+      context: .
+      dockerfile: ./generators/order/Dockerfile
+    environment:
+      KAFKA_BROKERS: "kafka:9092"
+      TOPIC: "user-events"
+    depends_on:
+      - kafka-init
+    restart: unless-stopped
+    networks:
+      - kafka-net
+
+  # Kafdrop - Web UI для просмотра топиков Kafka
+  kafdrop:
+    image: obsidiandynamics/kafdrop:3.30.0
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+      JVM_OPTS: "-Xms32M -Xmx64M"
+    ports:
+      - "9000:9000"
+    depends_on:
+      - kafka-init
+    networks:
+      - kafka-net
+
+networks:
+  kafka-net:
+    driver: bridge
