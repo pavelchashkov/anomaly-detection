@@ -1,0 +1,4 @@
+clickhouse-driver==0.2.9
+apache-airflow==2.7.0
+requests==2.31.0
+types-requests

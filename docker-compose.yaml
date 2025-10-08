@@ -126,23 +126,132 @@ services:
       timeout: 10s
       retries: 3
 
-  # victoriametrics:
-  #   image: victoriametrics/victoria-metrics:latest
-  #   ports:
-  #     - "8428:8428"
-  #   command:
-  #     - -storageDataPath=/victoria-metrics-data
-  #     - -httpListenAddr=:8428
-  #     - -promscrape.config=/etc/victoriametrics/scrape.yml
-  #   volumes:
-  #     - victoriametrics_data:/victoria-metrics-data
-  #     - ./victoriametrics/scrape.yml:/etc/victoriametrics/scrape.yml:ro
-  #   networks:
-  #     - kafka-net
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    ports:
+      - "8428:8428"
+    command:
+      - -storageDataPath=/victoria-metrics-data
+      - -httpListenAddr=:8428
+    volumes:
+      - victoriametrics_data:/victoria-metrics-data
+    networks:
+      - kafka-net
+
+  grafana:
+    image: grafana/grafana:9.5.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - victoriametrics
+    networks:
+      - kafka-net
+
+  # for AirFlow
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kafka-net
+
+  # for AirFlow AirFlow
+  redis:
+    image: redis:6.2-alpine
+    networks:
+      - kafka-net
+
+  airflow-init:
+    image: apache/airflow:2.7.0
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/scripts:/opt/airflow/scripts
+    command: >
+      bash -c "
+        echo 'Waiting for PostgreSQL...'
+        until nc -z postgres 5432; do sleep 1; done
+        echo 'Initializing AirFlow database...'
+        airflow db init
+        echo 'Creating admin user...'
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
+        echo 'AirFlow initialization completed!'
+      "
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - kafka-net
+
+  # AirFlow
+  airflow-webserver:
+    image: apache/airflow:2.7.0
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/scripts:/opt/airflow/scripts
+      - ./airflow/requirements.txt:/opt/airflow/requirements.txt
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "
+        pip install -r /opt/airflow/requirements.txt &&
+        airflow webserver
+      "
+    depends_on:
+      - postgres
+      - redis
+      - airflow-init
+    networks:
+      - kafka-net
+
+  airflow-scheduler:
+    image: apache/airflow:2.7.0
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/scripts:/opt/airflow/scripts
+      - ./airflow/requirements.txt:/opt/airflow/requirements.txt
+    command: >
+      bash -c "
+        pip install -r /opt/airflow/requirements.txt &&
+        airflow scheduler
+      "
+    depends_on:
+      - postgres
+      - redis
+      - airflow-init
+    networks:
+      - kafka-net
 
 volumes:
   clickhouse_data:
   victoriametrics_data:
+  postgres_data:
+  grafana_data:
 
 networks:
   kafka-net:

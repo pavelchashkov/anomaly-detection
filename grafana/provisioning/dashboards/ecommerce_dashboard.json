@@ -1,0 +1,55 @@
+{
+    "dashboard": {
+        "title": "Ecommerce Metrics Dashboard",
+        "panels": [
+            {
+                "title": "Conversion Rate",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "ecommerce_conversion_rate",
+                        "legendFormat": "Conversion Rate"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "percentunit",
+                        "decimals": 2
+                    }
+                }
+            },
+            {
+                "title": "GMV",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "ecommerce_gmv",
+                        "legendFormat": "GMV"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "currencyUSD",
+                        "decimals": 2
+                    }
+                }
+            },
+            {
+                "title": "Cart Abandonment Rate",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "ecommerce_cart_abandonment_rate",
+                        "legendFormat": "Abandonment Rate"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "percentunit",
+                        "decimals": 2
+                    }
+                }
+            }
+        ]
+    }
+}
