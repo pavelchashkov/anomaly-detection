@@ -177,6 +177,7 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__WEBSERVER__SECRET_KEY: "b9896f447a112c289eaab6f296d00fa60804aaa578bf646ae0acf5b32d99"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/scripts:/opt/airflow/scripts
@@ -206,6 +207,7 @@ services:
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+      AIRFLOW__WEBSERVER__SECRET_KEY: "b9896f447a112c289eaab6f296d00fa60804aaa578bf646ae0acf5b32d99"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/scripts:/opt/airflow/scripts
@@ -231,6 +233,7 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__WEBSERVER__SECRET_KEY: "b9896f447a112c289eaab6f296d00fa60804aaa578bf646ae0acf5b32d99"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/scripts:/opt/airflow/scripts
@@ -239,6 +242,31 @@ services:
       bash -c "
         pip install -r /opt/airflow/requirements.txt &&
         airflow scheduler
+      "
+    depends_on:
+      - postgres
+      - redis
+      - airflow-init
+    networks:
+      - kafka-net
+
+  airflow-worker:
+    image: apache/airflow:2.7.0
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      _PIP_ADDITIONAL_REQUIREMENTS: "clickhouse-driver==0.2.6 requests==2.31.0"
+      AIRFLOW__WEBSERVER__SECRET_KEY: "b9896f447a112c289eaab6f296d00fa60804aaa578bf646ae0acf5b32d99"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/scripts:/opt/airflow/scripts
+      - ./airflow/requirements.txt:/opt/airflow/requirements.txt
+    command: >
+      bash -c "
+        pip install -r /opt/airflow/requirements.txt &&
+        airflow celery worker
       "
     depends_on:
       - postgres

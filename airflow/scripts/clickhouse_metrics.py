@@ -23,7 +23,7 @@ def get_ecommerce_metrics():
     )
     SELECT
         'ecommerce_conversion_rate' as metric,
-        if(viewing_sessions > 0, order_sessions / viewing_sessions, 0) as value,
+        toFloat64(if(viewing_sessions > 0, order_sessions / viewing_sessions, 0)) as value,  -- Явное преобразование
         timestamp,
         map('type', 'conversion') as labels
     FROM minute_data
@@ -32,7 +32,7 @@ def get_ecommerce_metrics():
 
     SELECT
         'ecommerce_cart_abandonment_rate' as metric,
-        if(cart_sessions > 0, (cart_sessions - order_sessions) / cart_sessions, 0) as value,
+        toFloat64(if(cart_sessions > 0, (cart_sessions - order_sessions) / cart_sessions, 0)) as value,  -- Явное преобразование
         timestamp,
         map('type', 'abandonment') as labels
     FROM minute_data
@@ -41,7 +41,7 @@ def get_ecommerce_metrics():
 
     SELECT
         'ecommerce_gmv' as metric,
-        gmv as value,
+        toFloat64(gmv) as value,  -- Явное преобразование
         timestamp,
         map('type', 'revenue') as labels
     FROM minute_data

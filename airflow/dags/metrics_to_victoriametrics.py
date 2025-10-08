@@ -1,5 +1,6 @@
 import sys
 from datetime import datetime, timedelta
+from typing import List, Tuple
 
 import requests
 from airflow.operators.python import PythonOperator
@@ -19,29 +20,39 @@ default_args = {
 
 
 def push_metrics_to_victoriametrics():
-    metrics = get_ecommerce_metrics()
+    print("=== Starting metrics collection ===")
+    try:
+        metrics: List[Tuple] = get_ecommerce_metrics()  # type: ignore
+        print(f"✅ Retrieved {len(metrics)} metrics from ClickHouse")
 
-    victoriametrics_url = "http://victoriametrics:8428/api/v1/import"
+        victoriametrics_url = "http://victoriametrics:8428/api/v1/import"
 
-    for metric_name, metric_value, timestamp, labels in metrics:  # type: ignore # TODO add check type Iterable[Tuple]
-        metric_data = {
-            "metric": metric_name,
-            "value": float(metric_value),
-            "timestamp": int(timestamp.timestamp()),
-            "labels": labels,
-        }
-
-        try:
-            response = requests.post(
-                victoriametrics_url,
-                json=metric_data,
-                headers={"Content-Type": "application/json"},
-                timeout=10,
+        for i, (metric_name, metric_value, timestamp, labels) in enumerate(metrics):
+            print(
+                f"  Metric {i + 1}: {metric_name} = {metric_value}, timestamp = {timestamp}"
             )
-            response.raise_for_status()
-            print(f"Successfully sent metric: {metric_name} = {metric_value}")
-        except Exception as e:
-            print(f"Error sending metric {metric_name}: {e}")
+
+            metric_data = {
+                "metric": {"__name__": metric_name, **labels},
+                "values": [float(metric_value)],
+                "timestamps": [int(timestamp.timestamp() * 1000)],
+            }
+
+            try:
+                response = requests.post(
+                    victoriametrics_url,
+                    json=metric_data,
+                    headers={"Content-Type": "application/json"},
+                    timeout=10,
+                )
+                response.raise_for_status()
+                print("✅ Successfully sent to VictoriaMetrics")
+            except Exception as e:
+                print(f"❌ Error sending {metric_name}: {e}")
+
+    except Exception as e:
+        print(f"❌ Error in metrics collection: {e}")
+        raise
 
 
 with DAG(
