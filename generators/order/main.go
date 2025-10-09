@@ -48,7 +48,7 @@ func main() {
 			log.Printf("Sent event: %s", eventJSON)
 		}
 
-		time.Sleep(time.Duration(5+rand.Intn(15)) * time.Second)
+		time.Sleep(time.Duration(15+rand.Intn(25)) * time.Second)
 	}
 }
 
@@ -61,7 +61,7 @@ func generateOrderEvent() OrderEvent {
 		OrderID:   fmt.Sprintf("order-%d-%d", time.Now().Unix(), rand.Intn(1000)),
 		SessionID: fmt.Sprintf("session-%d", rand.Intn(10000)),
 		Timestamp: time.Now().Unix(),
-		Amount:    float64(rand.Intn(10000)+100) / 100.0,
+		Amount:    float64(rand.Intn(5000)+500) / 100.0,
 		Status:    statuses[rand.Intn(len(statuses))],
 	}
 }

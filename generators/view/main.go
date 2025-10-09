@@ -49,7 +49,7 @@ func main() {
 			log.Printf("Sent event: %s", eventJSON)
 		}
 
-		time.Sleep(time.Duration(5+rand.Intn(15)) * time.Second)
+		time.Sleep(time.Duration(3+rand.Intn(7)) * time.Second)
 	}
 }
 

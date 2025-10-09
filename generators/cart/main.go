@@ -49,7 +49,7 @@ func main() {
 			log.Printf("Sent event: %s", eventJSON)
 		}
 
-		time.Sleep(time.Duration(5+rand.Intn(15)) * time.Second)
+		time.Sleep(time.Duration(10+rand.Intn(20)) * time.Second)
 	}
 }
 
@@ -63,7 +63,7 @@ func generateCartEvent() CartEvent {
 		CartID:    fmt.Sprintf("cart-%d", rand.Intn(10000)),
 		SessionID: fmt.Sprintf("session-%d", rand.Intn(10000)),
 		Timestamp: time.Now().Unix(),
-		Quantity:  rand.Intn(5) + 1,
+		Quantity:  rand.Intn(3) + 1,
 		Action:    eventTypes[rand.Intn(len(eventTypes))],
 	}
 }
