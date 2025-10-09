@@ -4,6 +4,7 @@ from typing import List, Tuple
 
 import requests
 from airflow.operators.python import PythonOperator
+from clickhouse_driver import Client
 
 from airflow import DAG
 
@@ -17,6 +18,39 @@ default_args = {
     "retries": 1,
     "retry_delay": timedelta(minutes=1),
 }
+
+
+def save_metrics_to_clickhouse():
+    client = Client(
+        host="clickhouse",
+        port=9000,
+        user="admin",
+        password="password",
+        database="ecommerce",
+    )
+
+    metrics: List[Tuple] = get_ecommerce_metrics()  # type: ignore
+
+    insert_query = """
+    INSERT INTO ecommerce.historical_metrics
+    (timestamp, metric_name, metric_value, labels)
+    VALUES
+    """
+
+    data = []
+    for metric_name, metric_value, timestamp, labels in metrics:
+        data.append(
+            {
+                "timestamp": timestamp,
+                "metric_name": metric_name,
+                "metric_value": float(metric_value),
+                "labels": labels,
+            }
+        )
+
+    if data:
+        client.execute(insert_query, data)
+        print(f"✅ Saved {len(data)} metrics to ClickHouse historical table")
 
 
 def push_metrics_to_victoriametrics():
@@ -63,7 +97,14 @@ with DAG(
     catchup=False,
 ) as dag:
 
+    save_metrics = PythonOperator(
+        task_id="save_metrics_to_clickhouse",
+        python_callable=save_metrics_to_clickhouse,
+    )
+
     push_metrics = PythonOperator(
         task_id="push_metrics_to_victoriametrics",
         python_callable=push_metrics_to_victoriametrics,
     )
+
+    push_metrics >> save_metrics

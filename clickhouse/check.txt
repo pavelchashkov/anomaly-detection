@@ -1,19 +1,27 @@
 docker-compose exec clickhouse clickhouse-client --user admin --password password
 
-Проверка 1: Подключение к ClickHouse и база данных
+---------------------------------------------------------------
+
+Подключение к ClickHouse и база данных
 SHOW DATABASES;
 
-Проверка 2: Таблицы в базе ecommerce
+---------------------------------------------------------------
+
+Таблицы в базе ecommerce
 SHOW TABLES FROM ecommerce;
 
-Проверка 3: Данные в raw_events
+---------------------------------------------------------------
+
+Данные в raw_events
 SELECT 
     _topic,
     count() as total_count
 FROM ecommerce.raw_events 
 GROUP BY _topic;
 
-Проверка 4: Проверим обогащенные данные
+---------------------------------------------------------------
+
+Проверка обогащенных данных
 SELECT 
     event_type,
     service_source,
@@ -21,7 +29,9 @@ SELECT
 FROM ecommerce.enriched_events 
 GROUP BY event_type, service_source;
 
-Проверка 5: Проверим воронку конверсии
+---------------------------------------------------------------
+
+Проверка воронки конверсии
 WITH session_funnel AS (
     SELECT 
         session_id,
@@ -41,7 +51,9 @@ SELECT
     if(sessions_with_views > 0, sum(ordered) / sum(viewed), 0) as conversion_rate
 FROM session_funnel;
 
-Проверка 6: Проверим продуктовые метрики
+---------------------------------------------------------------
+
+Проверка продуктовых метрик
 SELECT 
     metric_name,
     count() as data_points,
@@ -69,3 +81,31 @@ SELECT
     sum(amount) as metric_value
 FROM ecommerce.enriched_events
 WHERE service_source = 'order_service';
+
+---------------------------------------------------------------
+
+Проверка таблицы historical_metrics:
+SELECT 
+    metric_name,
+    count() as data_points,
+    min(timestamp) as first_point,
+    max(timestamp) as last_point
+FROM ecommerce.historical_metrics 
+GROUP BY metric_name;
+
+---------------------------------------------------------------
+
+Примеры данных
+SELECT *
+FROM ecommerce.historical_metrics 
+ORDER BY timestamp DESC
+LIMIT 10;
+
+---------------------------------------------------------------
+
+Проверка что DAG работает и сохраняет данные
+SELECT 
+    count() as new_records,
+    max(timestamp) as latest_timestamp
+FROM ecommerce.historical_metrics 
+WHERE timestamp > now() - interval 5 minute;

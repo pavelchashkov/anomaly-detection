@@ -86,3 +86,15 @@ PARTITION BY
     toYYYYMM (timestamp)
 ORDER BY
     (metric_name, timestamp, labels);
+
+CREATE TABLE
+    IF NOT EXISTS ecommerce.historical_metrics (
+        timestamp DateTime64 (3),
+        metric_name String,
+        metric_value Float64,
+        labels Map (String, String)
+    ) ENGINE = MergeTree ()
+PARTITION BY
+    toYYYYMM (timestamp)
+ORDER BY
+    (metric_name, timestamp, labels);
